@@ -9,8 +9,19 @@ import { GameLogic } from './GameLogic';
 import { VisualMonitor } from './VisualMonitor';
 import { useToast } from '@/hooks/use-toast';
 
-export const EchoQuestGame: React.FC = () => {
-  const [gameLogic] = useState(() => new GameLogic());
+export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }> = ({ difficulty = 'easy' }) => {
+  // Maze size by difficulty
+  const getMazeSize = () => {
+    switch (difficulty) {
+      case 'easy': return 9;
+      case 'medium': return 15;
+      case 'hard': return 25;
+      default: return 9;
+    }
+  };
+
+  // Use a state for gameLogic that resets when difficulty changes
+  const [gameLogic, setGameLogic] = useState(() => new GameLogic(getMazeSize(), getMazeSize()));
   const [audioSystem] = useState(() => new AudioSystem());
   const [gameState, setGameState] = useState(gameLogic.getGameState());
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
@@ -19,6 +30,15 @@ export const EchoQuestGame: React.FC = () => {
   const [moveHistory, setMoveHistory] = useState<Array<{ x: number; y: number; timestamp: number }>>([]);
   const gameRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // When difficulty changes, reset the game logic and state
+  React.useEffect(() => {
+    const logic = new GameLogic(getMazeSize(), getMazeSize());
+    setGameLogic(logic);
+    setGameState(logic.getGameState());
+    setMoveHistory([]);
+    setIsAudioInitialized(false);
+  }, [difficulty]);
 
   // Initialize audio system
   const initializeAudio = useCallback(async () => {
@@ -149,15 +169,17 @@ export const EchoQuestGame: React.FC = () => {
     }
   }, [gameLogic, audioSystem, toast]);
 
+  // In resetGame, use the current difficulty
   const resetGame = useCallback(() => {
-    gameLogic.resetGame();
-    setGameState(gameLogic.getGameState());
-    setMoveHistory([]); // Clear movement history
+    const logic = new GameLogic(getMazeSize(), getMazeSize());
+    setGameLogic(logic);
+    setGameState(logic.getGameState());
+    setMoveHistory([]);
     toast({
       title: "Game Reset",
       description: "New maze generated. Find the goal using sound cues!",
     });
-  }, [gameLogic, toast]);
+  }, [toast, difficulty]);
 
   const showHelp = useCallback(() => {
     toast({
