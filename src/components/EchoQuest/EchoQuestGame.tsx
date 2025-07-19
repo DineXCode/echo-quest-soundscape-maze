@@ -121,11 +121,29 @@ export const EchoQuestGame: React.FC = () => {
       // Check for victory
       if (newState.gameWon) {
         setTimeout(() => {
-          audioSystem.playSound('goal-near');
+          // Play celebration fanfare
+          audioSystem.playCelebration();
+          
+          // Calculate performance score
+          const totalCells = newState.maze.reduce((total, row) => 
+            total + row.filter(cell => cell === 0).length, 0
+          );
+          const efficiency = Math.round((totalCells / newState.moveCount) * 100);
+          
           toast({
-            title: "Victory!",
-            description: `Congratulations! You found the goal in ${newState.moveCount} moves!`,
+            title: "🎉 VICTORY ACHIEVED! 🎉",
+            description: `Congratulations! You found the goal in ${newState.moveCount} moves! Efficiency: ${efficiency}%`,
+            duration: 8000, // Show longer for celebration
           });
+          
+          // Additional score announcement
+          setTimeout(() => {
+            toast({
+              title: "Final Score",
+              description: `Total moves: ${newState.moveCount} | Exploration efficiency: ${efficiency}% | Well done!`,
+              duration: 6000,
+            });
+          }, 3000);
         }, 200);
       }
     }

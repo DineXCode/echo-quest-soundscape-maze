@@ -39,6 +39,9 @@ export class AudioSystem {
     this.sounds.set('goal-close', this.generateChime(0.3));
     this.sounds.set('goal-medium', this.generateChime(0.6));
     this.sounds.set('goal-near', this.generateChime(1.0));
+    
+    // Generate celebration sound (victory fanfare)
+    this.sounds.set('celebration', this.generateCelebration());
   }
 
   private generateFootstep(volume: number): AudioBuffer {
@@ -104,6 +107,37 @@ export class AudioSystem {
     return buffer;
   }
 
+  private generateCelebration(): AudioBuffer {
+    const length = this.audioContext.sampleRate * 3.0; // 3 seconds
+    const buffer = this.audioContext.createBuffer(1, length, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Generate celebration: ascending fanfare with multiple harmonics
+    for (let i = 0; i < length; i++) {
+      const t = i / this.audioContext.sampleRate;
+      const phase = t / 3.0; // 0 to 1 over 3 seconds
+      
+      // Ascending melody: C-E-G-C
+      let frequency = 523; // C5
+      if (phase > 0.25) frequency = 659; // E5
+      if (phase > 0.5) frequency = 784; // G5
+      if (phase > 0.75) frequency = 1047; // C6
+      
+      const envelope = Math.exp(-t * 0.8) * (1 - Math.exp(-t * 10)); // Attack and decay
+      
+      // Multiple harmonics for rich sound
+      const fundamental = Math.sin(2 * Math.PI * frequency * t);
+      const harmonic2 = Math.sin(2 * Math.PI * frequency * 2 * t) * 0.3;
+      const harmonic3 = Math.sin(2 * Math.PI * frequency * 3 * t) * 0.2;
+      
+      // Add some tremolo for celebration effect
+      const tremolo = 1 + 0.2 * Math.sin(2 * Math.PI * 6 * t);
+      
+      data[i] = (fundamental + harmonic2 + harmonic3) * envelope * tremolo * 0.6;
+    }
+    return buffer;
+  }
+
   playSound(soundName: string, panValue: number = 0): void {
     if (!this.isInitialized || !this.sounds.has(soundName)) {
       return;
@@ -141,5 +175,9 @@ export class AudioSystem {
     else if (distance <= 4) soundName = 'goal-medium';
     
     this.playSound(soundName);
+  }
+
+  playCelebration(): void {
+    this.playSound('celebration');
   }
 }
