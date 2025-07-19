@@ -172,9 +172,22 @@ export const EchoQuestGame: React.FC = () => {
       gameRef.current.focus();
     }
 
+    // Handler for initializing audio or resetting after win
+    const handleAnyKey = async (event: KeyboardEvent) => {
+      if (!isAudioInitialized) {
+        await initializeAudio();
+      } else if (gameState.gameWon) {
+        resetGame();
+      }
+    };
+
     window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleKeyPress]);
+    window.addEventListener('keydown', handleAnyKey);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+      window.removeEventListener('keydown', handleAnyKey);
+    };
+  }, [handleKeyPress, isAudioInitialized, gameState.gameWon, initializeAudio, resetGame]);
 
   // Auto-play goal chime on game start
   useEffect(() => {
