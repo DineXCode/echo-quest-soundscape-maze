@@ -1,8 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { AudioSystem } from './AudioSystem';
 import { GameLogic } from './GameLogic';
+import { VisualMonitor } from './VisualMonitor';
 import { useToast } from '@/hooks/use-toast';
 
 export const EchoQuestGame: React.FC = () => {
@@ -11,6 +15,8 @@ export const EchoQuestGame: React.FC = () => {
   const [gameState, setGameState] = useState(gameLogic.getGameState());
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [visualMonitorEnabled, setVisualMonitorEnabled] = useState(false);
+  const [moveHistory, setMoveHistory] = useState<Array<{ x: number; y: number; timestamp: number }>>([]);
   const gameRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -80,6 +86,18 @@ export const EchoQuestGame: React.FC = () => {
     const newState = gameLogic.getGameState();
     setGameState(newState);
 
+    // Update move history if move was successful
+    if (result.success) {
+      setMoveHistory(prev => [
+        ...prev,
+        {
+          x: newState.playerPosition.x,
+          y: newState.playerPosition.y,
+          timestamp: Date.now()
+        }
+      ]);
+    }
+
     // Play appropriate sounds
     if (result.hitWall) {
       audioSystem.playSound('wall-collision');
@@ -116,6 +134,7 @@ export const EchoQuestGame: React.FC = () => {
   const resetGame = useCallback(() => {
     gameLogic.resetGame();
     setGameState(gameLogic.getGameState());
+    setMoveHistory([]); // Clear movement history
     toast({
       title: "Game Reset",
       description: "New maze generated. Find the goal using sound cues!",
@@ -229,9 +248,9 @@ export const EchoQuestGame: React.FC = () => {
           </Card>
         )}
 
-        {/* Game Status */}
+        {/* Game Status & Visual Monitor Toggle */}
         {isAudioInitialized && (
-          <Card className="p-4">
+          <Card className="p-4 space-y-4">
             <div className="flex justify-between items-center">
               <div className="text-sm text-muted-foreground">
                 Moves: <span className="font-semibold text-foreground">{gameState.moveCount}</span>
@@ -250,8 +269,34 @@ export const EchoQuestGame: React.FC = () => {
                 </Button>
               </div>
             </div>
+            
+            <Separator />
+            
+            {/* Visual Monitor Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="visual-monitor" className="text-sm font-medium">
+                  Visual Monitor for Assistants
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Enable visual tracking for teachers, parents, or helpers to monitor progress
+                </p>
+              </div>
+              <Switch
+                id="visual-monitor"
+                checked={visualMonitorEnabled}
+                onCheckedChange={setVisualMonitorEnabled}
+              />
+            </div>
           </Card>
         )}
+
+        {/* Visual Monitor Interface */}
+        <VisualMonitor 
+          gameState={gameState}
+          moveHistory={moveHistory}
+          isVisible={visualMonitorEnabled && isAudioInitialized}
+        />
 
         {/* Debug Maze View */}
         {renderMaze()}
