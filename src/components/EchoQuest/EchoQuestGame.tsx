@@ -40,13 +40,7 @@ export const EchoQuestGame: React.FC = () => {
 
   // Handle keyboard input
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    if (!isAudioInitialized) {
-      // Initialize audio on first key press
-      initializeAudio();
-      // Do not process movement on this event; let the next key press handle it
-      return;
-    }
-    if (gameState.gameWon) return;
+    if (!isAudioInitialized || gameState.gameWon) return;
 
     let direction: 'north' | 'south' | 'east' | 'west' | null = null;
 
@@ -85,7 +79,7 @@ export const EchoQuestGame: React.FC = () => {
       event.preventDefault();
       handleMove(direction);
     }
-  }, [isAudioInitialized, gameState.gameWon, initializeAudio, resetGame, showHelp, setDebugMode, handleMove]);
+  }, [isAudioInitialized, gameState.gameWon]);
 
   const handleMove = useCallback((direction: 'north' | 'south' | 'east' | 'west') => {
     const result = gameLogic.movePlayer(direction);
@@ -231,12 +225,16 @@ export const EchoQuestGame: React.FC = () => {
         {!isAudioInitialized && (
           <Card className="p-6 border-echo-primary/50 bg-gradient-to-r from-echo-primary/10 to-echo-secondary/10">
             <div className="text-center space-y-4">
-              <div className="text-lg font-semibold" tabIndex={0} aria-live="polite">
-                Ready to Begin?
-              </div>
-              <p className="text-muted-foreground" tabIndex={0} aria-live="polite">
-                Press any key to start the game and initialize the audio system.
+              <div className="text-lg font-semibold">Ready to Begin?</div>
+              <p className="text-muted-foreground">
+                Click the button below to initialize the audio system and start your journey.
               </p>
+              <Button 
+                onClick={initializeAudio}
+                className="bg-echo-primary hover:bg-echo-primary/90 text-primary-foreground font-semibold px-8 py-3"
+              >
+                Start EchoQuest
+              </Button>
             </div>
           </Card>
         )}
