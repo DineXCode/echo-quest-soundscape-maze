@@ -1,0 +1,269 @@
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AudioSystem } from './AudioSystem';
+import { GameLogic } from './GameLogic';
+import { useToast } from '@/hooks/use-toast';
+
+export const EchoQuestGame: React.FC = () => {
+  const [gameLogic] = useState(() => new GameLogic());
+  const [audioSystem] = useState(() => new AudioSystem());
+  const [gameState, setGameState] = useState(gameLogic.getGameState());
+  const [isAudioInitialized, setIsAudioInitialized] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const gameRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  // Initialize audio system
+  const initializeAudio = useCallback(async () => {
+    try {
+      await audioSystem.initialize();
+      setIsAudioInitialized(true);
+      toast({
+        title: "Audio Ready",
+        description: "EchoQuest audio system initialized. Use arrow keys or WASD to navigate!",
+      });
+    } catch (error) {
+      toast({
+        title: "Audio Error",
+        description: "Failed to initialize audio. Some sounds may not work.",
+        variant: "destructive",
+      });
+    }
+  }, [audioSystem, toast]);
+
+  // Handle keyboard input
+  const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    if (!isAudioInitialized || gameState.gameWon) return;
+
+    let direction: 'north' | 'south' | 'east' | 'west' | null = null;
+
+    switch (event.key.toLowerCase()) {
+      case 'arrowup':
+      case 'w':
+        direction = 'north';
+        break;
+      case 'arrowdown':
+      case 's':
+        direction = 'south';
+        break;
+      case 'arrowright':
+      case 'd':
+        direction = 'east';
+        break;
+      case 'arrowleft':
+      case 'a':
+        direction = 'west';
+        break;
+      case 'r':
+        // Reset game
+        resetGame();
+        return;
+      case 'h':
+        // Show help
+        showHelp();
+        return;
+      case 'm':
+        // Toggle debug mode
+        setDebugMode(prev => !prev);
+        return;
+    }
+
+    if (direction) {
+      event.preventDefault();
+      handleMove(direction);
+    }
+  }, [isAudioInitialized, gameState.gameWon]);
+
+  const handleMove = useCallback((direction: 'north' | 'south' | 'east' | 'west') => {
+    const result = gameLogic.movePlayer(direction);
+    const newState = gameLogic.getGameState();
+    setGameState(newState);
+
+    // Play appropriate sounds
+    if (result.hitWall) {
+      audioSystem.playSound('wall-collision');
+      toast({
+        title: "Wall Hit",
+        description: "You walked into a wall! Listen for the dripping sound.",
+      });
+    } else {
+      // Play footstep with directional audio
+      const panValue = direction === 'east' ? 0.3 : direction === 'west' ? -0.3 : 0;
+      audioSystem.playDirectionalFootstep(result.isCorrectDirection, panValue);
+      
+      // Play open space echo
+      audioSystem.playSound('open-space');
+      
+      // Play goal chime if close
+      if (result.distanceToGoal <= 4) {
+        audioSystem.playGoalChime(result.distanceToGoal);
+      }
+
+      // Check for victory
+      if (newState.gameWon) {
+        setTimeout(() => {
+          audioSystem.playSound('goal-near');
+          toast({
+            title: "Victory!",
+            description: `Congratulations! You found the goal in ${newState.moveCount} moves!`,
+          });
+        }, 200);
+      }
+    }
+  }, [gameLogic, audioSystem, toast]);
+
+  const resetGame = useCallback(() => {
+    gameLogic.resetGame();
+    setGameState(gameLogic.getGameState());
+    toast({
+      title: "Game Reset",
+      description: "New maze generated. Find the goal using sound cues!",
+    });
+  }, [gameLogic, toast]);
+
+  const showHelp = useCallback(() => {
+    toast({
+      title: "EchoQuest Controls",
+      description: "Arrow Keys/WASD: Move | R: Reset | H: Help | M: Toggle Debug",
+    });
+  }, [toast]);
+
+  // Set up event listeners
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.focus();
+    }
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [handleKeyPress]);
+
+  // Auto-play goal chime on game start
+  useEffect(() => {
+    if (isAudioInitialized && !gameState.gameWon) {
+      const distance = Math.abs(gameState.playerPosition.x - gameState.goalPosition.x) + 
+                      Math.abs(gameState.playerPosition.y - gameState.goalPosition.y);
+      if (distance <= 4) {
+        audioSystem.playGoalChime(distance);
+      }
+    }
+  }, [isAudioInitialized, audioSystem, gameState]);
+
+  const renderMaze = () => {
+    if (!debugMode) return null;
+
+    return (
+      <div className="font-mono text-sm bg-muted p-4 rounded-md">
+        <div className="mb-2 text-muted-foreground">Debug View (Press M to toggle):</div>
+        <pre className="whitespace-pre leading-tight">
+          {gameLogic.getMazeString()}
+        </pre>
+        <div className="mt-2 text-xs text-muted-foreground">
+          P = Player | G = Goal | █ = Wall | · = Empty
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div 
+      ref={gameRef}
+      tabIndex={0}
+      className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50 p-4 focus:outline-none"
+    >
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-echo-primary to-echo-accent bg-clip-text text-transparent">
+            EchoQuest
+          </h1>
+          <p className="text-xl text-echo-secondary">The Sound Navigation Challenge</p>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Navigate the maze using only sound. No visuals - just your ears and spatial awareness.
+          </p>
+        </div>
+
+        {/* Audio Initialization */}
+        {!isAudioInitialized && (
+          <Card className="p-6 border-echo-primary/50 bg-gradient-to-r from-echo-primary/10 to-echo-secondary/10">
+            <div className="text-center space-y-4">
+              <div className="text-lg font-semibold">Ready to Begin?</div>
+              <p className="text-muted-foreground">
+                Click the button below to initialize the audio system and start your journey.
+              </p>
+              <Button 
+                onClick={initializeAudio}
+                className="bg-echo-primary hover:bg-echo-primary/90 text-primary-foreground font-semibold px-8 py-3"
+              >
+                Start EchoQuest
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Game Instructions */}
+        {isAudioInitialized && (
+          <Card className="p-6 space-y-4">
+            <h2 className="text-xl font-semibold text-echo-primary">How to Play</h2>
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h3 className="font-semibold mb-2">Controls:</h3>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Arrow Keys or WASD to move</li>
+                  <li>• R to reset game</li>
+                  <li>• H for help</li>
+                  <li>• M to toggle debug view</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-2">Audio Cues:</h3>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Footsteps: Louder when going the right way</li>
+                  <li>• Dripping: You hit a wall</li>
+                  <li>• Echo: Open space around you</li>
+                  <li>• Chime: Getting closer to the goal</li>
+                </ul>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Game Status */}
+        {isAudioInitialized && (
+          <Card className="p-4">
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                Moves: <span className="font-semibold text-foreground">{gameState.moveCount}</span>
+              </div>
+              {gameState.gameWon && (
+                <div className="text-echo-success font-semibold animate-sound-pulse">
+                  🎉 Victory! Goal Found!
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={showHelp}>
+                  Help
+                </Button>
+                <Button variant="outline" size="sm" onClick={resetGame}>
+                  New Game
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Debug Maze View */}
+        {renderMaze()}
+
+        {/* Accessibility Notice */}
+        <Card className="p-4 bg-muted/50">
+          <div className="text-center text-sm text-muted-foreground">
+            <p>🔊 This game is designed for audio-first navigation.</p>
+            <p>Use headphones for the best spatial audio experience.</p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};

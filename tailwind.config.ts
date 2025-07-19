@@ -24,6 +24,16 @@ export default {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+				
+				// EchoQuest game colors
+				'echo-primary': 'hsl(var(--echo-primary))',
+				'echo-secondary': 'hsl(var(--echo-secondary))',
+				'echo-accent': 'hsl(var(--echo-accent))',
+				'echo-danger': 'hsl(var(--echo-danger))',
+				'echo-success': 'hsl(var(--echo-success))',
+				'sound-wave': 'hsl(var(--sound-wave))',
+				'sound-echo': 'hsl(var(--sound-echo))',
+				'sound-goal': 'hsl(var(--sound-goal))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
@@ -84,11 +94,43 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				// EchoQuest audio animations
+				'sound-pulse': {
+					'0%, 100%': { 
+						transform: 'scale(1)',
+						opacity: '0.6'
+					},
+					'50%': { 
+						transform: 'scale(1.1)',
+						opacity: '1'
+					}
+				},
+				'echo-ripple': {
+					'0%': {
+						transform: 'scale(0)',
+						opacity: '1'
+					},
+					'100%': {
+						transform: 'scale(2)',
+						opacity: '0'
+					}
+				},
+				'goal-glow': {
+					'0%, 100%': {
+						boxShadow: '0 0 10px hsl(var(--sound-goal) / 0.5)'
+					},
+					'50%': {
+						boxShadow: '0 0 30px hsl(var(--sound-goal) / 0.8)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'sound-pulse': 'sound-pulse 2s ease-in-out infinite',
+				'echo-ripple': 'echo-ripple 1s ease-out',
+				'goal-glow': 'goal-glow 2s ease-in-out infinite'
 			}
 		}
 	},

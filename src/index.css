@@ -2,39 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* EchoQuest Design System - Audio-first maze game
+All colors MUST be HSL for accessibility and theming.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Dark atmospheric theme for audio-focused experience */
+    --background: 220 27% 8%;
+    --foreground: 220 15% 95%;
+    
+    /* Echo Quest specific colors */
+    --echo-primary: 250 80% 65%;
+    --echo-secondary: 280 60% 45%;
+    --echo-accent: 200 100% 70%;
+    --echo-danger: 0 75% 60%;
+    --echo-success: 120 60% 50%;
+    
+    /* Audio visualization colors */
+    --sound-wave: 250 80% 65%;
+    --sound-echo: 280 40% 30%;
+    --sound-goal: 45 100% 65%;
+    
+    /* Gradients for atmospheric effects */
+    --gradient-maze: linear-gradient(135deg, hsl(var(--echo-primary) / 0.1), hsl(var(--echo-secondary) / 0.2));
+    --gradient-audio: radial-gradient(circle, hsl(var(--sound-wave) / 0.3), transparent);
+    
+    /* Shadows and glows for audio feedback */
+    --glow-audio: 0 0 20px hsl(var(--sound-wave) / 0.5);
+    --shadow-deep: 0 8px 32px hsl(220 27% 4% / 0.8);
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Themed card and UI components for dark atmosphere */
+    --card: 220 25% 12%;
+    --card-foreground: 220 15% 95%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 220 25% 12%;
+    --popover-foreground: 220 15% 95%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 250 80% 65%;
+    --primary-foreground: 220 27% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 15% 95%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 20% 15%;
+    --muted-foreground: 220 10% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 200 100% 70%;
+    --accent-foreground: 220 27% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 75% 60%;
+    --destructive-foreground: 220 15% 95%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 220 20% 18%;
+    --input: 220 20% 18%;
+    --ring: 250 80% 65%;
 
     --radius: 0.5rem;
 
