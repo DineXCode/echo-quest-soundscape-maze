@@ -9,16 +9,38 @@ import { GameLogic } from './GameLogic';
 import { VisualMonitor } from './VisualMonitor';
 import { useToast } from '@/hooks/use-toast';
 
-export const EchoQuestGame: React.FC = () => {
-  const [gameLogic] = useState(() => new GameLogic());
+export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }> = ({ difficulty = 'easy' }) => {
+  // Maze size by difficulty
+  const getMazeSize = () => {
+    switch (difficulty) {
+      case 'easy': return 9;
+      case 'medium': return 15;
+      case 'hard': return 25;
+      default: return 9;
+    }
+  };
+
+  // Use a state for gameLogic that resets when difficulty changes
+  const [gameLogic, setGameLogic] = useState(() => new GameLogic(getMazeSize(), getMazeSize()));
   const [audioSystem] = useState(() => new AudioSystem());
   const [gameState, setGameState] = useState(gameLogic.getGameState());
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [visualMonitorEnabled, setVisualMonitorEnabled] = useState(false);
   const [moveHistory, setMoveHistory] = useState<Array<{ x: number; y: number; timestamp: number }>>([]);
+  const [isCelebrating, setIsCelebrating] = useState(false);
   const gameRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // When difficulty changes, reset the game logic and state
+  React.useEffect(() => {
+    const logic = new GameLogic(getMazeSize(), getMazeSize());
+    setGameLogic(logic);
+    setGameState(logic.getGameState());
+    setMoveHistory([]);
+    setIsAudioInitialized(false);
+    setIsCelebrating(false);
+  }, [difficulty]);
 
   // Initialize audio system
   const initializeAudio = useCallback(async () => {
@@ -40,7 +62,7 @@ export const EchoQuestGame: React.FC = () => {
 
   // Handle keyboard input
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    if (!isAudioInitialized || gameState.gameWon) return;
+    if (!isAudioInitialized || gameState.gameWon || isCelebrating) return;
 
     let direction: 'north' | 'south' | 'east' | 'west' | null = null;
 
@@ -79,7 +101,7 @@ export const EchoQuestGame: React.FC = () => {
       event.preventDefault();
       handleMove(direction);
     }
-  }, [isAudioInitialized, gameState.gameWon]);
+  }, [isAudioInitialized, gameState.gameWon, isCelebrating]);
 
   const handleMove = useCallback((direction: 'north' | 'south' | 'east' | 'west') => {
     const result = gameLogic.movePlayer(direction);
@@ -115,11 +137,12 @@ export const EchoQuestGame: React.FC = () => {
       
       // Play goal chime if close
       if (result.distanceToGoal <= 4) {
-        audioSystem.playGoalChime(result.distanceToGoal);
+        audioSystem.playGoalGlow(result.distanceToGoal);
       }
 
       // Check for victory
       if (newState.gameWon) {
+        setIsCelebrating(true);
         setTimeout(() => {
           // Play celebration fanfare
           audioSystem.playCelebration();
@@ -145,19 +168,32 @@ export const EchoQuestGame: React.FC = () => {
             });
           }, 3000);
         }, 200);
+        
+        // Allow new game after 3 seconds of celebration
+        setTimeout(() => {
+          setIsCelebrating(false);
+          toast({
+            title: "Ready for New Game",
+            description: "Press any key to start a new game!",
+            duration: 3000,
+          });
+        }, 3000);
       }
     }
   }, [gameLogic, audioSystem, toast]);
 
+  // In resetGame, use the current difficulty
   const resetGame = useCallback(() => {
-    gameLogic.resetGame();
-    setGameState(gameLogic.getGameState());
-    setMoveHistory([]); // Clear movement history
+    const logic = new GameLogic(getMazeSize(), getMazeSize());
+    setGameLogic(logic);
+    setGameState(logic.getGameState());
+    setMoveHistory([]);
+    setIsCelebrating(false);
     toast({
       title: "Game Reset",
       description: "New maze generated. Find the goal using sound cues!",
     });
-  }, [gameLogic, toast]);
+  }, [toast, difficulty]);
 
   const showHelp = useCallback(() => {
     toast({
@@ -172,9 +208,22 @@ export const EchoQuestGame: React.FC = () => {
       gameRef.current.focus();
     }
 
+    // Handler for initializing audio or resetting after win
+    const handleAnyKey = async (event: KeyboardEvent) => {
+      if (!isAudioInitialized) {
+        await initializeAudio();
+      } else if (gameState.gameWon && !isCelebrating) {
+        resetGame();
+      }
+    };
+
     window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleKeyPress]);
+    window.addEventListener('keydown', handleAnyKey);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+      window.removeEventListener('keydown', handleAnyKey);
+    };
+  }, [handleKeyPress, isAudioInitialized, gameState.gameWon, isCelebrating, initializeAudio, resetGame]);
 
   // Auto-play goal chime on game start
   useEffect(() => {
@@ -182,7 +231,7 @@ export const EchoQuestGame: React.FC = () => {
       const distance = Math.abs(gameState.playerPosition.x - gameState.goalPosition.x) + 
                       Math.abs(gameState.playerPosition.y - gameState.goalPosition.y);
       if (distance <= 4) {
-        audioSystem.playGoalChime(distance);
+        audioSystem.playGoalGlow(distance);
       }
     }
   }, [isAudioInitialized, audioSystem, gameState]);
