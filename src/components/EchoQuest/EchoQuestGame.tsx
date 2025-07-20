@@ -137,7 +137,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
       
       // Play goal chime if close
       if (result.distanceToGoal <= 4) {
-        audioSystem.playGoalChime(result.distanceToGoal);
+        audioSystem.playGoalGlow(result.distanceToGoal);
       }
 
       // Check for victory
@@ -231,7 +231,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
       const distance = Math.abs(gameState.playerPosition.x - gameState.goalPosition.x) + 
                       Math.abs(gameState.playerPosition.y - gameState.goalPosition.y);
       if (distance <= 4) {
-        audioSystem.playGoalChime(distance);
+        audioSystem.playGoalGlow(distance);
       }
     }
   }, [isAudioInitialized, audioSystem, gameState]);

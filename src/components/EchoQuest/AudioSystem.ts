@@ -25,115 +25,186 @@ export class AudioSystem {
   }
 
   private async generateSounds() {
-    // Generate footstep sound (short percussion)
-    this.sounds.set('footstep-normal', this.generateFootstep(0.5));
-    this.sounds.set('footstep-correct', this.generateFootstep(0.8));
+    // Generate realistic footstep sounds
+    this.sounds.set('footstep-normal', this.generateFootstep('stone', 0.5));
+    this.sounds.set('footstep-correct', this.generateFootstep('grass', 0.8));
     
-    // Generate wall collision sound (water drip)
-    this.sounds.set('wall-collision', this.generateWaterDrip());
+    // Generate wall collision sound (solid impact)
+    this.sounds.set('wall-collision', this.generateWallHit());
     
     // Generate echo sound (reverb-heavy tone)
     this.sounds.set('open-space', this.generateEcho());
     
-    // Generate goal chime (ascending bell)
-    this.sounds.set('goal-close', this.generateChime(0.3));
-    this.sounds.set('goal-medium', this.generateChime(0.6));
-    this.sounds.set('goal-near', this.generateChime(1.0));
+    // Generate goal glow sound (warm, inviting)
+    this.sounds.set('goal-close', this.generateGoalGlow(0.3));
+    this.sounds.set('goal-medium', this.generateGoalGlow(0.6));
+    this.sounds.set('goal-near', this.generateGoalGlow(1.0));
     
-    // Generate celebration sound (victory fanfare)
-    this.sounds.set('celebration', this.generateCelebration());
+    // Generate epic celebration sound
+    this.sounds.set('celebration', this.generateEpicCelebration());
   }
 
-  private generateFootstep(volume: number): AudioBuffer {
-    const length = this.audioContext.sampleRate * 0.1; // 100ms
+  private generateFootstep(surface: 'stone' | 'grass' | 'wood', volume: number): AudioBuffer {
+    const length = this.audioContext.sampleRate * 0.15; // 150ms
     const buffer = this.audioContext.createBuffer(1, length, this.audioContext.sampleRate);
     const data = buffer.getChannelData(0);
 
-    // Generate footstep: quick attack, fast decay
     for (let i = 0; i < length; i++) {
       const t = i / this.audioContext.sampleRate;
-      const envelope = Math.exp(-t * 20); // Fast decay
-      const noise = (Math.random() - 0.5) * 2;
-      data[i] = noise * envelope * volume * 0.5;
+      
+      let envelope: number;
+      let noise: number;
+      
+      if (surface === 'stone') {
+        // Stone: sharp attack, quick decay, high frequency noise
+        envelope = Math.exp(-t * 15) * (1 - Math.exp(-t * 50));
+        noise = (Math.random() - 0.5) * 2 * 0.7;
+        const stoneRing = Math.sin(2 * Math.PI * 800 * t) * Math.exp(-t * 8) * 0.3;
+        data[i] = (noise + stoneRing) * envelope * volume * 0.6;
+      } else if (surface === 'grass') {
+        // Grass: softer attack, longer decay, lower frequency
+        envelope = Math.exp(-t * 8) * (1 - Math.exp(-t * 30));
+        noise = (Math.random() - 0.5) * 2 * 0.5;
+        const grassRustle = Math.sin(2 * Math.PI * 200 * t) * Math.exp(-t * 5) * 0.4;
+        data[i] = (noise + grassRustle) * envelope * volume * 0.7;
+      } else {
+        // Wood: medium attack, medium decay, hollow sound
+        envelope = Math.exp(-t * 12) * (1 - Math.exp(-t * 40));
+        noise = (Math.random() - 0.5) * 2 * 0.6;
+        const woodHollow = Math.sin(2 * Math.PI * 400 * t) * Math.exp(-t * 6) * 0.5;
+        data[i] = (noise + woodHollow) * envelope * volume * 0.65;
+      }
     }
     return buffer;
   }
 
-  private generateWaterDrip(): AudioBuffer {
-    const length = this.audioContext.sampleRate * 0.3; // 300ms
+  private generateWallHit(): AudioBuffer {
+    const length = this.audioContext.sampleRate * 0.4; // 400ms
     const buffer = this.audioContext.createBuffer(1, length, this.audioContext.sampleRate);
     const data = buffer.getChannelData(0);
 
-    // Generate water drip: high frequency with echo
+    // Generate wall hit: solid impact with resonance
     for (let i = 0; i < length; i++) {
       const t = i / this.audioContext.sampleRate;
-      const frequency = 800 + 400 * Math.exp(-t * 5); // Descending tone
-      const envelope = Math.exp(-t * 3);
-      data[i] = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.3;
+      
+      // Sharp impact at the beginning
+      const impact = Math.exp(-t * 50) * (1 - Math.exp(-t * 200));
+      
+      // Resonant frequencies for solid surface
+      const resonance1 = Math.sin(2 * Math.PI * 150 * t) * Math.exp(-t * 3) * 0.4;
+      const resonance2 = Math.sin(2 * Math.PI * 300 * t) * Math.exp(-t * 4) * 0.3;
+      const resonance3 = Math.sin(2 * Math.PI * 600 * t) * Math.exp(-t * 6) * 0.2;
+      
+      // Low frequency thud
+      const thud = Math.sin(2 * Math.PI * 80 * t) * Math.exp(-t * 2) * 0.5;
+      
+      data[i] = (impact + resonance1 + resonance2 + resonance3 + thud) * 0.4;
     }
     return buffer;
   }
 
   private generateEcho(): AudioBuffer {
-    const length = this.audioContext.sampleRate * 0.8; // 800ms
+    const length = this.audioContext.sampleRate * 1.2; // 1.2 seconds
     const buffer = this.audioContext.createBuffer(1, length, this.audioContext.sampleRate);
     const data = buffer.getChannelData(0);
 
-    // Generate echo: low frequency with long reverb
+    // Generate echo: atmospheric space sound
     for (let i = 0; i < length; i++) {
       const t = i / this.audioContext.sampleRate;
-      const frequency = 200;
-      const envelope = Math.exp(-t * 1.5);
-      const reverb = Math.sin(2 * Math.PI * frequency * t * 0.5) * 0.3;
-      data[i] = (Math.sin(2 * Math.PI * frequency * t) + reverb) * envelope * 0.2;
-    }
-    return buffer;
-  }
-
-  private generateChime(volume: number): AudioBuffer {
-    const length = this.audioContext.sampleRate * 1.0; // 1 second
-    const buffer = this.audioContext.createBuffer(1, length, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    // Generate chime: bell-like tone with harmonics
-    for (let i = 0; i < length; i++) {
-      const t = i / this.audioContext.sampleRate;
-      const envelope = Math.exp(-t * 2);
-      const fundamental = Math.sin(2 * Math.PI * 523 * t); // C5
-      const harmonic2 = Math.sin(2 * Math.PI * 523 * 2 * t) * 0.5;
-      const harmonic3 = Math.sin(2 * Math.PI * 523 * 3 * t) * 0.25;
-      data[i] = (fundamental + harmonic2 + harmonic3) * envelope * volume * 0.4;
-    }
-    return buffer;
-  }
-
-  private generateCelebration(): AudioBuffer {
-    const length = this.audioContext.sampleRate * 3.0; // 3 seconds
-    const buffer = this.audioContext.createBuffer(1, length, this.audioContext.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    // Generate celebration: ascending fanfare with multiple harmonics
-    for (let i = 0; i < length; i++) {
-      const t = i / this.audioContext.sampleRate;
-      const phase = t / 3.0; // 0 to 1 over 3 seconds
       
-      // Ascending melody: C-E-G-C
+      // Base atmospheric tone
+      const baseTone = Math.sin(2 * Math.PI * 180 * t) * Math.exp(-t * 1.2) * 0.3;
+      
+      // Echo reflections
+      const echo1 = Math.sin(2 * Math.PI * 180 * (t - 0.1)) * Math.exp(-(t - 0.1) * 1.5) * 0.2;
+      const echo2 = Math.sin(2 * Math.PI * 180 * (t - 0.2)) * Math.exp(-(t - 0.2) * 1.8) * 0.15;
+      
+      // Ambient noise
+      const ambient = (Math.random() - 0.5) * 0.1 * Math.exp(-t * 2);
+      
+      data[i] = baseTone + (t > 0.1 ? echo1 : 0) + (t > 0.2 ? echo2 : 0) + ambient;
+    }
+    return buffer;
+  }
+
+  private generateGoalGlow(volume: number): AudioBuffer {
+    const length = this.audioContext.sampleRate * 1.5; // 1.5 seconds
+    const buffer = this.audioContext.createBuffer(1, length, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Generate warm, glowing sound
+    for (let i = 0; i < length; i++) {
+      const t = i / this.audioContext.sampleRate;
+      
+      // Warm fundamental frequency
+      const fundamental = Math.sin(2 * Math.PI * 440 * t) * Math.exp(-t * 1.5) * 0.4;
+      
+      // Harmonic series for warmth
+      const harmonic2 = Math.sin(2 * Math.PI * 440 * 2 * t) * Math.exp(-t * 1.8) * 0.3;
+      const harmonic3 = Math.sin(2 * Math.PI * 440 * 3 * t) * Math.exp(-t * 2.0) * 0.2;
+      const harmonic4 = Math.sin(2 * Math.PI * 440 * 4 * t) * Math.exp(-t * 2.2) * 0.15;
+      
+      // Gentle modulation for "glow" effect
+      const modulation = 1 + 0.1 * Math.sin(2 * Math.PI * 2 * t);
+      
+      // Soft attack and long decay
+      const envelope = (1 - Math.exp(-t * 3)) * Math.exp(-t * 1.2);
+      
+      data[i] = (fundamental + harmonic2 + harmonic3 + harmonic4) * envelope * modulation * volume * 0.5;
+    }
+    return buffer;
+  }
+
+  private generateEpicCelebration(): AudioBuffer {
+    const length = this.audioContext.sampleRate * 4.0; // 4 seconds
+    const buffer = this.audioContext.createBuffer(1, length, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Generate epic celebration with multiple instruments
+    for (let i = 0; i < length; i++) {
+      const t = i / this.audioContext.sampleRate;
+      const phase = t / 4.0; // 0 to 1 over 4 seconds
+      
       let frequency = 523; // C5
-      if (phase > 0.25) frequency = 659; // E5
-      if (phase > 0.5) frequency = 784; // G5
-      if (phase > 0.75) frequency = 1047; // C6
+      let melody = 0;
       
-      const envelope = Math.exp(-t * 0.8) * (1 - Math.exp(-t * 10)); // Attack and decay
+      // Epic melody progression
+      if (phase < 0.25) {
+        frequency = 523; // C5
+        melody = Math.sin(2 * Math.PI * frequency * t);
+      } else if (phase < 0.5) {
+        frequency = 659; // E5
+        melody = Math.sin(2 * Math.PI * frequency * t);
+      } else if (phase < 0.75) {
+        frequency = 784; // G5
+        melody = Math.sin(2 * Math.PI * frequency * t);
+      } else {
+        frequency = 1047; // C6
+        melody = Math.sin(2 * Math.PI * frequency * t);
+      }
       
-      // Multiple harmonics for rich sound
-      const fundamental = Math.sin(2 * Math.PI * frequency * t);
-      const harmonic2 = Math.sin(2 * Math.PI * frequency * 2 * t) * 0.3;
-      const harmonic3 = Math.sin(2 * Math.PI * frequency * 3 * t) * 0.2;
+      // Rich harmonics for orchestral sound
+      const harmonic2 = Math.sin(2 * Math.PI * frequency * 2 * t) * 0.4;
+      const harmonic3 = Math.sin(2 * Math.PI * frequency * 3 * t) * 0.3;
+      const harmonic4 = Math.sin(2 * Math.PI * frequency * 4 * t) * 0.2;
       
-      // Add some tremolo for celebration effect
-      const tremolo = 1 + 0.2 * Math.sin(2 * Math.PI * 6 * t);
+      // Bass line
+      const bass = Math.sin(2 * Math.PI * frequency * 0.5 * t) * 0.6;
       
-      data[i] = (fundamental + harmonic2 + harmonic3) * envelope * tremolo * 0.6;
+      // Percussion (timpani-like)
+      const percussion = Math.exp(-t * 8) * (1 - Math.exp(-t * 50)) * 0.8;
+      
+      // Choir-like pad
+      const choir = Math.sin(2 * Math.PI * frequency * 0.25 * t) * Math.exp(-t * 0.5) * 0.3;
+      
+      // Dynamic envelope
+      const envelope = (1 - Math.exp(-t * 5)) * Math.exp(-t * 0.6);
+      
+      // Tremolo and vibrato for epic effect
+      const tremolo = 1 + 0.15 * Math.sin(2 * Math.PI * 8 * t);
+      const vibrato = 1 + 0.1 * Math.sin(2 * Math.PI * 6 * t);
+      
+      data[i] = (melody + harmonic2 + harmonic3 + harmonic4 + bass + choir) * envelope * tremolo * vibrato * 0.4 + percussion;
     }
     return buffer;
   }
@@ -169,7 +240,7 @@ export class AudioSystem {
     this.playSound(soundName, panValue);
   }
 
-  playGoalChime(distance: number): void {
+  playGoalGlow(distance: number): void {
     let soundName = 'goal-close';
     if (distance <= 2) soundName = 'goal-near';
     else if (distance <= 4) soundName = 'goal-medium';
