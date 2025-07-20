@@ -28,6 +28,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
   const [debugMode, setDebugMode] = useState(false);
   const [visualMonitorEnabled, setVisualMonitorEnabled] = useState(false);
   const [moveHistory, setMoveHistory] = useState<Array<{ x: number; y: number; timestamp: number }>>([]);
+  const [isCelebrating, setIsCelebrating] = useState(false);
   const gameRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -38,6 +39,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
     setGameState(logic.getGameState());
     setMoveHistory([]);
     setIsAudioInitialized(false);
+    setIsCelebrating(false);
   }, [difficulty]);
 
   // Initialize audio system
@@ -60,7 +62,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
 
   // Handle keyboard input
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    if (!isAudioInitialized || gameState.gameWon) return;
+    if (!isAudioInitialized || gameState.gameWon || isCelebrating) return;
 
     let direction: 'north' | 'south' | 'east' | 'west' | null = null;
 
@@ -99,7 +101,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
       event.preventDefault();
       handleMove(direction);
     }
-  }, [isAudioInitialized, gameState.gameWon]);
+  }, [isAudioInitialized, gameState.gameWon, isCelebrating]);
 
   const handleMove = useCallback((direction: 'north' | 'south' | 'east' | 'west') => {
     const result = gameLogic.movePlayer(direction);
@@ -140,6 +142,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
 
       // Check for victory
       if (newState.gameWon) {
+        setIsCelebrating(true);
         setTimeout(() => {
           // Play celebration fanfare
           audioSystem.playCelebration();
@@ -165,6 +168,16 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
             });
           }, 3000);
         }, 200);
+        
+        // Allow new game after 3 seconds of celebration
+        setTimeout(() => {
+          setIsCelebrating(false);
+          toast({
+            title: "Ready for New Game",
+            description: "Press any key to start a new game!",
+            duration: 3000,
+          });
+        }, 3000);
       }
     }
   }, [gameLogic, audioSystem, toast]);
@@ -175,6 +188,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
     setGameLogic(logic);
     setGameState(logic.getGameState());
     setMoveHistory([]);
+    setIsCelebrating(false);
     toast({
       title: "Game Reset",
       description: "New maze generated. Find the goal using sound cues!",
@@ -198,7 +212,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
     const handleAnyKey = async (event: KeyboardEvent) => {
       if (!isAudioInitialized) {
         await initializeAudio();
-      } else if (gameState.gameWon) {
+      } else if (gameState.gameWon && !isCelebrating) {
         resetGame();
       }
     };
@@ -209,7 +223,7 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
       window.removeEventListener('keydown', handleKeyPress);
       window.removeEventListener('keydown', handleAnyKey);
     };
-  }, [handleKeyPress, isAudioInitialized, gameState.gameWon, initializeAudio, resetGame]);
+  }, [handleKeyPress, isAudioInitialized, gameState.gameWon, isCelebrating, initializeAudio, resetGame]);
 
   // Auto-play goal chime on game start
   useEffect(() => {
