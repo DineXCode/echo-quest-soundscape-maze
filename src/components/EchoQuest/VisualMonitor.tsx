@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { GameState } from './GameLogic';
+import { GameLogic } from './GameLogic';
 
 interface VisualMonitorProps {
   gameState: GameState;
@@ -61,8 +62,47 @@ export const VisualMonitor: React.FC<VisualMonitorProps> = ({
     );
   };
 
-  const distance = Math.abs(gameState.playerPosition.x - gameState.goalPosition.x) + 
-                  Math.abs(gameState.playerPosition.y - gameState.goalPosition.y);
+  // Replace direct distance with shortest path distance
+  const getMazeDistanceToGoal = () => {
+    // Recreate a GameLogic instance to use its BFS method
+    // (or, if gameState has a reference, use that)
+    // We'll reconstruct the logic here for now
+    const { playerPosition, goalPosition, maze } = gameState;
+    const width = maze[0].length;
+    const height = maze.length;
+    const visited = Array.from({ length: height }, () => Array(width).fill(false));
+    const queue: Array<{ x: number; y: number; dist: number }> = [];
+    queue.push({ x: playerPosition.x, y: playerPosition.y, dist: 0 });
+    visited[playerPosition.y][playerPosition.x] = true;
+    const directions = [
+      { dx: 0, dy: -1 }, // North
+      { dx: 0, dy: 1 },  // South
+      { dx: 1, dy: 0 },  // East
+      { dx: -1, dy: 0 }, // West
+    ];
+    while (queue.length > 0) {
+      const { x, y, dist } = queue.shift()!;
+      if (x === goalPosition.x && y === goalPosition.y) {
+        return dist;
+      }
+      for (const { dx, dy } of directions) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (
+          nx >= 0 && nx < width &&
+          ny >= 0 && ny < height &&
+          maze[ny][nx] === 0 &&
+          !visited[ny][nx]
+        ) {
+          visited[ny][nx] = true;
+          queue.push({ x: nx, y: ny, dist: dist + 1 });
+        }
+      }
+    }
+    return 9999;
+  };
+
+  const distance = getMazeDistanceToGoal();
 
   const uniquePositionsVisited = new Set(
     moveHistory.map(pos => `${pos.x},${pos.y}`)
