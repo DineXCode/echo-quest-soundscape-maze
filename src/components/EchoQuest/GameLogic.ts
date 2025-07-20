@@ -153,7 +153,41 @@ export class GameLogic {
   }
 
   private getDistanceToGoal(): number {
-    return this.getDistance(this.state.playerPosition, this.state.goalPosition);
+    // Use BFS to find the shortest path from player to goal
+    const { playerPosition, goalPosition, maze } = this.state;
+    const width = maze[0].length;
+    const height = maze.length;
+    const visited = Array.from({ length: height }, () => Array(width).fill(false));
+    const queue: Array<{ x: number; y: number; dist: number }> = [];
+    queue.push({ x: playerPosition.x, y: playerPosition.y, dist: 0 });
+    visited[playerPosition.y][playerPosition.x] = true;
+    const directions = [
+      { dx: 0, dy: -1 }, // North
+      { dx: 0, dy: 1 },  // South
+      { dx: 1, dy: 0 },  // East
+      { dx: -1, dy: 0 }, // West
+    ];
+    while (queue.length > 0) {
+      const { x, y, dist } = queue.shift()!;
+      if (x === goalPosition.x && y === goalPosition.y) {
+        return dist;
+      }
+      for (const { dx, dy } of directions) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (
+          nx >= 0 && nx < width &&
+          ny >= 0 && ny < height &&
+          maze[ny][nx] === this.CELL_EMPTY &&
+          !visited[ny][nx]
+        ) {
+          visited[ny][nx] = true;
+          queue.push({ x: nx, y: ny, dist: dist + 1 });
+        }
+      }
+    }
+    // If no path found, return a large number
+    return 9999;
   }
 
   private getDistance(pos1: Position, pos2: Position): number {
