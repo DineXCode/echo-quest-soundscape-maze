@@ -14,8 +14,8 @@ export const EchoQuestGame: React.FC<{ difficulty?: 'easy' | 'medium' | 'hard' }
   const getMazeSize = () => {
     switch (difficulty) {
       case 'easy': return 9;
-      case 'medium': return 15;
-      case 'hard': return 25;
+      case 'medium': return 13;
+      case 'hard': return 20;
       default: return 9;
     }
   };
